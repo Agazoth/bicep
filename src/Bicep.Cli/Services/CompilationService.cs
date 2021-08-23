@@ -42,7 +42,7 @@ namespace Bicep.Cli.Services
                 sourceFileGrouping = SourceFileGroupingBuilder.Rebuild(moduleDispatcher, new Workspace(), sourceFileGrouping);
             }
 
-            var compilation = new Compilation(this.invocationContext.ResourceTypeProvider, sourceFileGrouping);
+            var compilation = new Compilation(this.invocationContext.ResourceTypeProvider, sourceFileGrouping, null);
 
             LogDiagnostics(compilation);
 

@@ -39,7 +39,7 @@ namespace Bicep.Core.UnitTests.Utils
 
             var sourceFileGrouping = SourceFileGroupingFactory.CreateForFiles(uriDictionary, entryUri, fileResolver);
 
-            return Compile(new Compilation(resourceTypeProvider, sourceFileGrouping));
+            return Compile(new Compilation(resourceTypeProvider, sourceFileGrouping, null));
         }
 
         public static CompilationResult Compile(params (string fileName, string fileContents)[] files)

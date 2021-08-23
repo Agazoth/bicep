@@ -109,7 +109,7 @@ namespace Bicep.Decompiler
             var fileResolver = new FileResolver();
             var dispatcher = new ModuleDispatcher(new DefaultModuleRegistryProvider(fileResolver));
             var sourceFileGrouping = SourceFileGroupingBuilder.Build(fileResolver, dispatcher, workspace, entryUri);
-            var compilation = new Compilation(resourceTypeProvider, sourceFileGrouping);
+            var compilation = new Compilation(resourceTypeProvider, sourceFileGrouping, null);
 
             foreach (var (fileUri, sourceFile) in workspace.GetActiveSourceFilesByUri())
             {
@@ -127,7 +127,7 @@ namespace Bicep.Decompiler
                     workspace.UpsertSourceFile(newFile);
 
                     sourceFileGrouping = SourceFileGroupingBuilder.Build(fileResolver, dispatcher, workspace, entryUri);
-                    compilation = new Compilation(resourceTypeProvider, sourceFileGrouping);
+                    compilation = new Compilation(resourceTypeProvider, sourceFileGrouping, null);
                 }
             }
 
