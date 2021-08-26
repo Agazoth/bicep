@@ -45,24 +45,28 @@ namespace Bicep.LanguageServer
             this.scheduler = scheduler;
         }
 
-        public void RefreshCompilation(DocumentUri documentUri)
+        public void RefreshCompilation(DocumentUri documentUri, bool reloadBicepConfig = false)
         {
-            if (this.GetCompilation(documentUri) is null)
+            var compilationContext = this.GetCompilation(documentUri);
+
+            if (compilationContext is null)
             {
+                if (reloadBicepConfig &&
+                    workspace.TryGetSourceFile(documentUri.ToUri(), out ISourceFile? sourceFile) &&
+                    sourceFile is BicepFile)
+                {
+                    UpsertCompilationInternal(documentUri, null, sourceFile, reloadBicepConfig);
+                }
+
                 // the compilation we are refreshing no longer exists
                 return;
             }
 
-            // TODO: This likely has a race condition if the user is modifying the file at the same time
-            var modelLookup = new Dictionary<ISourceFile, ISemanticModel>();
-            var (_, removedTrees) = UpdateCompilationInternal(documentUri, null, modelLookup, Enumerable.Empty<ISourceFile>());
-            foreach (var (entrypointUri, context) in activeContexts)
-            {
-                if (removedTrees.Any(x => context.Compilation.SourceFileGrouping.SourceFiles.Contains(x)))
-                {
-                    UpdateCompilationInternal(entrypointUri, null, modelLookup, Enumerable.Empty<ISourceFile>());
-                }
-            }
+            // TODO: This may cause race condition if the user is modifying the file at the same time
+            // need to make a shallow copy so it counts as a different file even though all the content is identical
+            // this was the easiest way to force the compilation to be regenerated
+            var shallowCopy = new BicepFile(compilationContext.Compilation.SourceFileGrouping.EntryPoint);
+            UpsertCompilationInternal(documentUri, null, shallowCopy, reloadBicepConfig);
         }
 
         public void UpsertCompilation(DocumentUri documentUri, int? version, string fileContents, string? languageId = null, bool reloadBicepConfig = false)
@@ -70,22 +74,26 @@ namespace Bicep.LanguageServer
             if (this.ShouldUpsertCompilation(documentUri, languageId))
             {
                 var newFile = SourceFileFactory.CreateSourceFile(documentUri.ToUri(), fileContents);
-                var firstChanges = workspace.UpsertSourceFile(newFile);
-                var removedFiles = firstChanges.removed;
+                UpsertCompilationInternal(documentUri, version, newFile, reloadBicepConfig);
+            }
+        }
 
-                var modelLookup = new Dictionary<ISourceFile, ISemanticModel>();
-                if (newFile is BicepFile)
-                {
-                    // Do not update compilation if it is an ARM template file, since it cannot be an entrypoint.
-                    UpdateCompilationInternal(documentUri, version, modelLookup, removedFiles, reloadBicepConfig);
-                }
+        private void UpsertCompilationInternal(DocumentUri documentUri, int? version, ISourceFile newFile, bool reloadBicepConfig = false)
+        {
+            var (_, removedFiles) = workspace.UpsertSourceFile(newFile);
 
-                foreach (var (entrypointUri, context) in activeContexts)
+            var modelLookup = new Dictionary<ISourceFile, ISemanticModel>();
+            if (newFile is BicepFile)
+            {
+                // Do not update compilation if it is an ARM template file, since it cannot be an entrypoint.
+                UpdateCompilationInternal(documentUri, version, modelLookup, removedFiles, reloadBicepConfig);
+            }
+
+            foreach (var (entrypointUri, context) in activeContexts)
+            {
+                if (removedFiles.Any(x => context.Compilation.SourceFileGrouping.SourceFiles.Contains(x)))
                 {
-                    if (removedFiles.Any(x => context.Compilation.SourceFileGrouping.SourceFiles.Contains(x)))
-                    {
-                        UpdateCompilationInternal(entrypointUri, null, modelLookup, removedFiles, reloadBicepConfig);
-                    }
+                    UpdateCompilationInternal(entrypointUri, null, modelLookup, removedFiles, reloadBicepConfig);
                 }
             }
         }

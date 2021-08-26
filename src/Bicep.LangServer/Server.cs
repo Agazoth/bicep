@@ -24,7 +24,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using OmniSharp.Extensions.LanguageServer.Server;
 using OmnisharpLanguageServer = OmniSharp.Extensions.LanguageServer.Server.LanguageServer;
 using Bicep.LanguageServer.Utils;
-using Bicep.LanguageServer.Configuration;
 using Bicep.Core.Configuration;
 
 namespace Bicep.LanguageServer
@@ -38,8 +37,6 @@ namespace Bicep.LanguageServer
             public IResourceTypeProvider? ResourceTypeProvider { get; set; }
 
             public IFileResolver? FileResolver { get; set; }
-
-            public IBicepConfigChangeHandler? BicepConfigChangeHandler { get; set; }
         }
 
         private readonly OmnisharpLanguageServer server;
@@ -106,7 +103,6 @@ namespace Bicep.LanguageServer
             // without manually constructing up the graph
             services.AddSingleton<IResourceTypeProvider>(services => creationOptions.ResourceTypeProvider ?? AzResourceTypeProvider.CreateWithAzTypes());
             services.AddSingleton<ISnippetsProvider>(services => creationOptions.SnippetsProvider ?? new SnippetsProvider(fileResolver, new ConfigHelper(loadDefaultConfig: true)));
-            services.AddSingleton<IBicepConfigChangeHandler>(services => creationOptions.BicepConfigChangeHandler ?? new BicepConfigChangeHandler(fileResolver));
             services.AddSingleton<IFileResolver>(services => fileResolver);
             services.AddSingleton<IModuleRegistryProvider, DefaultModuleRegistryProvider>();
             services.AddSingleton<IModuleDispatcher, ModuleDispatcher>();
